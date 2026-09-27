@@ -215,3 +215,127 @@ def test_user_roles_are_identified(client):
 
         assert not participant.is_organizer
         assert organizer.is_organizer
+
+
+def test_participant_registration_creates_account_and_session(client):
+    """A valid registration creates a participant and logs the user in."""
+    test_client, _ = client
+
+    response = test_client.post(
+        "/register",
+        data={
+            "name": "New Participant",
+            "email": "NEW@example.com",
+            "password": "SecurePassword123",
+            "confirm_password": "SecurePassword123",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Signed in as New Participant" in response.data
+
+    with flask_app.app_context():
+        user = User.query.filter_by(email="new@example.com").one()
+        assert user.role == "participant"
+        assert user.password_hash != "SecurePassword123"
+        assert user.check_password("SecurePassword123")
+
+    with test_client.session_transaction() as session:
+        assert "_user_id" in session
+
+
+def test_registration_rejects_duplicate_email(client):
+    """Registration does not create two accounts with one email."""
+    test_client, _ = client
+
+    with flask_app.app_context():
+        user = User(
+            name="Existing Participant",
+            email="existing@example.com",
+            role="participant",
+        )
+        user.set_password("ExistingPassword123")
+        db.session.add(user)
+        db.session.commit()
+
+    response = test_client.post(
+        "/register",
+        data={
+            "name": "Duplicate Participant",
+            "email": "EXISTING@example.com",
+            "password": "DifferentPassword123",
+            "confirm_password": "DifferentPassword123",
+        },
+        follow_redirects=True,
+    )
+
+    assert b"account with that email already exists" in response.data
+
+    with flask_app.app_context():
+        assert User.query.filter_by(email="existing@example.com").count() == 1
+
+
+def test_login_rejects_invalid_password(client):
+    """An incorrect password does not create an authenticated session."""
+    test_client, _ = client
+
+    with flask_app.app_context():
+        user = User(
+            name="Existing Participant",
+            email="existing@example.com",
+            role="participant",
+        )
+        user.set_password("CorrectPassword123")
+        db.session.add(user)
+        db.session.commit()
+
+    response = test_client.post(
+        "/login",
+        data={
+            "email": "existing@example.com",
+            "password": "WrongPassword",
+        },
+        follow_redirects=True,
+    )
+
+    assert b"Invalid email or password" in response.data
+
+    with test_client.session_transaction() as session:
+        assert "_user_id" not in session
+
+
+def test_organizer_login_and_logout(client):
+    """An organizer can authenticate, reach the dashboard, and log out."""
+    test_client, _ = client
+
+    with flask_app.app_context():
+        organizer = User(
+            name="Test Organizer",
+            email="organizer@example.com",
+            role="organizer",
+        )
+        organizer.set_password("OrganizerPassword123")
+        db.session.add(organizer)
+        db.session.commit()
+
+    response = test_client.post(
+        "/login",
+        data={
+            "email": "organizer@example.com",
+            "password": "OrganizerPassword123",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Organizer Dashboard" in response.data
+    assert b"Signed in as Test Organizer" in response.data
+
+    response = test_client.post("/logout", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"Log In" in response.data
+
+    with test_client.session_transaction() as session:
+        assert "_user_id" not in session

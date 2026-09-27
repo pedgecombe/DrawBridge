@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Log In | DrawBridge{% endblock %}
+
+{% block content %}
+    <h1>Log In</h1>
+    <p>Enter your DrawBridge account information.</p>
+
+    {% if error %}
+        <p role="alert">{{ error }}</p>
+    {% endif %}
+
+    <form method="post">
+        <div>
+            <label for="email">Email address</label>
+            <input
+                type="email"
+                id="email"
+                name="email"
+                required
+                autocomplete="email"
+            >
+        </div>
+
+        <div>
+            <label for="password">Password</label>
+            <input
+                type="password"
+                id="password"
+                name="password"
+                required
+                autocomplete="current-password"
+            >
+        </div>
+
+        <button type="submit">Log In</button>
+    </form>
+
+    <p>
+        Need an account?
+        <a href="{{ url_for('register') }}">Register as a participant</a>
+    </p>
+{% endblock %}

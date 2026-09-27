@@ -173,6 +173,29 @@ footer {
     text-align: center;
 }
 
+nav span {
+    color: var(--white);
+}
+
+nav form {
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+nav form button {
+    padding: 0;
+    background: transparent;
+}
+
+nav form button:hover {
+    background: transparent;
+    text-decoration: underline;
+}
+
 @media (max-width: 700px) {
     nav {
         flex-wrap: wrap;

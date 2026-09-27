@@ -55,7 +55,7 @@ class User(UserMixin, db.Model):
         """Return True when the user has organizer permissions."""
         return self.role == "organizer"
 
-    
+
 class Raffle(db.Model):
     """A single raffle: its prize, pricing, and ticket sale window."""
 

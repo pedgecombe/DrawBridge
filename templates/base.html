@@ -12,9 +12,25 @@
 <body>
     <header>
         <nav>
-            <a href="/">DrawBridge</a>
-            <a href="/">Active Raffles</a>
-            <a href="/organizer">Organizer</a>
+            <a href="{{ url_for('home') }}">DrawBridge</a>
+            <a href="{{ url_for('home') }}">Active Raffles</a>
+
+            {% if current_user.is_authenticated %}
+                <span>Signed in as {{ current_user.name }}</span>
+
+                {% if current_user.is_organizer %}
+                    <a href="{{ url_for('organizer_dashboard') }}">
+                        Organizer
+                    </a>
+                {% endif %}
+
+                <form method="post" action="{{ url_for('logout') }}">
+                    <button type="submit">Log Out</button>
+                </form>
+            {% else %}
+                <a href="{{ url_for('login') }}">Log In</a>
+                <a href="{{ url_for('register') }}">Register</a>
+            {% endif %}
         </nav>
     </header>
 

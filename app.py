@@ -12,14 +12,109 @@ from flask import Flask, redirect, render_template, request, url_for
 
 from models import Participant, Raffle, Ticket, TicketOrder, Winner, db
 
+import os
 import random
+from datetime import datetime
+
+from flask import Flask, redirect, render_template, request, url_for
+from flask_login import LoginManager, current_user, login_required, login_user, logout_user
+
+from models import Participant, Raffle, Ticket, TicketOrder, User, Winner, db
 
 app = Flask(__name__)
+
+app.config["SECRET_KEY"] = os.environ.get(
+    "DRAWBRIDGE_SECRET_KEY",
+    "drawbridge-local-development-key",
+)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///drawbridge.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
+
+login_manager = LoginManager()
+login_manager.login_view = "login"
+login_manager.init_app(app)
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    """Load the authenticated user from the session identifier."""
+    return db.session.get(User, int(user_id))
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    """Create a participant account and begin an authenticated session."""
+    if current_user.is_authenticated:
+        return redirect(url_for("home"))
+
+    error = None
+
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        if not name or not email or not password:
+            error = "Name, email, and password are required."
+        elif len(password) < 8:
+            error = "Password must contain at least eight characters."
+        elif password != confirm_password:
+            error = "The password confirmation does not match."
+        elif User.query.filter_by(email=email).first() is not None:
+            error = "An account with that email already exists."
+        else:
+            user = User(
+                name=name,
+                email=email,
+                role="participant",
+            )
+            user.set_password(password)
+
+            db.session.add(user)
+            db.session.commit()
+            login_user(user)
+
+            return redirect(url_for("home"))
+
+    return render_template("register.html", error=error)
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    """Authenticate an existing participant or organizer."""
+    if current_user.is_authenticated:
+        if current_user.is_organizer:
+            return redirect(url_for("organizer_dashboard"))
+        return redirect(url_for("home"))
+
+    error = None
+
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        user = User.query.filter_by(email=email).first()
+
+        if user is None or not user.check_password(password):
+            error = "Invalid email or password."
+        else:
+            login_user(user)
+
+            if user.is_organizer:
+                return redirect(url_for("organizer_dashboard"))
+            return redirect(url_for("home"))
+
+    return render_template("login.html", error=error)
+
+
+@app.route("/logout", methods=["POST"])
+@login_required
+def logout():
+    """End the current authenticated session."""
+    logout_user()
+    return redirect(url_for("home"))
 
 
 @app.route("/")

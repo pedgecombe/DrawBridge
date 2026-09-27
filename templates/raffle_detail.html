@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}{{ raffle.title }} | DrawBridge{% endblock %}
+
+{% block content %}
+    <h1>{{ raffle.title }}</h1>
+
+    <p><strong>Prize:</strong> {{ raffle.prize }}</p>
+    <p>{{ raffle.description }}</p>
+    <p>
+        <strong>Ticket price:</strong>
+        ${{ "%.2f"|format(raffle.ticket_price) }}
+    </p>
+    <p>
+        <strong>Tickets remaining:</strong>
+        {{ raffle.ticket_limit - raffle.tickets|length }}
+        of {{ raffle.ticket_limit }}
+    </p>
+    <p>
+        <strong>Closing date:</strong>
+        {{ raffle.closing_date.strftime("%B %d, %Y at %I:%M %p") }}
+    </p>
+    <p><strong>Status:</strong> {{ raffle.status }}</p>
+
+    {% if raffle.status == "Active" %}
+    <a href="/raffles/{{ raffle.id }}/order">Purchase Tickets</a>
+{% elif raffle.winner %}
+    <p><strong>This raffle is closed.</strong></p>
+
+    <h2>Raffle Result</h2>
+
+    <p>
+        <strong>Winning ticket:</strong>
+        DB-R{{ "%03d"|format(raffle.id) }}-{{ "%04d"|format(raffle.winner.ticket.ticket_number) }}
+    </p>
+
+    <p>
+        <strong>Winner:</strong>
+        {{ raffle.winner.ticket.order.participant.name }}
+    </p>
+{% else %}
+    <p>
+        <strong>Ticket sales are closed.</strong>
+        The winning ticket has not been selected yet.
+    </p>
+{% endif %}
+
+<a href="/">Return to Active Raffles</a>
+
+{% endblock %}

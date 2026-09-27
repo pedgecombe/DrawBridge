@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Active Raffles | DrawBridge{% endblock %}
+
+{% block content %}
+    <h1>Active Raffles</h1>
+    <p>Browse the available raffles and select one to view its details.</p>
+
+    {% if raffles %}
+        {% for raffle in raffles %}
+            <section>
+                <h2>{{ raffle.title }}</h2>
+                <p><strong>Prize:</strong> {{ raffle.prize }}</p>
+                <p>{{ raffle.description }}</p>
+                <p><strong>Ticket price:</strong> ${{ "%.2f"|format(raffle.ticket_price) }}</p>
+                <p><strong>Closing date:</strong> {{ raffle.closing_date.strftime("%B %d, %Y") }}</p>
+                <a href="/raffles/{{ raffle.id }}">View Raffle</a>
+            </section>
+        {% endfor %}
+    {% else %}
+        <p>There are currently no active raffles.</p>
+    {% endif %}
+{% endblock %}

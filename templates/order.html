@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Purchase Tickets | DrawBridge{% endblock %}
+
+{% block content %}
+    <h1>Purchase Tickets</h1>
+    <h2>{{ raffle.title }}</h2>
+
+    <p><strong>Prize:</strong> {{ raffle.prize }}</p>
+    <p>
+        <strong>Price per ticket:</strong>
+        ${{ "%.2f"|format(raffle.ticket_price) }}
+    </p>
+    <p>
+        <strong>Tickets remaining:</strong>
+        {{ raffle.ticket_limit - raffle.tickets|length }}
+    </p>
+
+    {% if error %}
+    <p>{{ error }}</p>
+{% endif %}
+
+    <form method="post">
+        <div>
+            <label for="name">Full name</label>
+            <input
+                type="text"
+                id="name"
+                name="name"
+                required
+            >
+        </div>
+
+        <div>
+            <label for="email">Email address</label>
+            <input
+                type="email"
+                id="email"
+                name="email"
+                required
+            >
+        </div>
+
+        <div>
+            <label for="phone">Phone number</label>
+            <input
+                type="tel"
+                id="phone"
+                name="phone"
+            >
+        </div>
+
+        <div>
+            <label for="quantity">Number of tickets</label>
+            <input
+                type="number"
+                id="quantity"
+                name="quantity"
+                min="1"
+                max="{{ raffle.ticket_limit - raffle.tickets|length }}"
+                value="1"
+                data-ticket-price="{{ raffle.ticket_price }}"
+                required
+            >
+        </div>
+
+        <p>
+            <strong>Calculated total:</strong>
+            $<span id="calculated-total">
+                {{ "%.2f"|format(raffle.ticket_price) }}
+            </span>
+        </p>
+
+        <script>
+            const quantityInput = document.getElementById("quantity");
+            const totalDisplay = document.getElementById("calculated-total");
+            const ticketPrice = Number(quantityInput.dataset.ticketPrice);
+
+            function updateTotal() {
+                const quantity = Number(quantityInput.value) || 0;
+                totalDisplay.textContent = (quantity * ticketPrice).toFixed(2);
+            }
+
+            quantityInput.addEventListener("input", updateTotal);
+        </script>
+
+        <p>
+            Payment will be recorded separately by the raffle organizer.
+        </p>
+
+        <button type="submit">Submit Ticket Order</button>
+    </form>
+
+    <a href="/raffles/{{ raffle.id }}">Return to Raffle</a>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Order Confirmation | DrawBridge{% endblock %}
+
+{% block content %}
+    <h1>Ticket Order Confirmed</h1>
+
+    <p>
+        Thank you, {{ order.participant.name }}.
+        Your ticket order has been recorded.
+    </p>
+
+    <p><strong>Raffle:</strong> {{ order.raffle.title }}</p>
+    <p><strong>Prize:</strong> {{ order.raffle.prize }}</p>
+    <p><strong>Quantity:</strong> {{ order.quantity }}</p>
+    <p>
+        <strong>Order total:</strong>
+        ${{ "%.2f"|format(order.total_price) }}
+    </p>
+    <p>
+        <strong>Payment status:</strong>
+        {{ order.payment_status }}
+    </p>
+
+    <h2>Your Ticket Numbers</h2>
+
+    <ul>
+        {% for ticket in order.tickets %}
+            <li>
+                DB-R{{ "%03d"|format(order.raffle.id) }}-{{ "%04d"|format(ticket.ticket_number) }}
+            </li>
+        {% endfor %}
+    </ul>
+
+    <p>
+        Tickets become eligible for the draw when the organizer
+        changes the payment status to Paid.
+    </p>
+
+    <a href="/">Return to Active Raffles</a>
+{% endblock %}

@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Organizer Dashboard | DrawBridge{% endblock %}
+
+{% block content %}
+    <h1>Organizer Dashboard</h1>
+
+    <p>
+    <a href="/organizer/raffles/create">Create New Raffle</a>
+    </p>
+
+    <h2>Raffles</h2>
+
+    {% if raffles %}
+        {% for raffle in raffles %}
+            <section>
+                <h3>{{ raffle.title }}</h3>
+                <p><strong>Status:</strong> {{ raffle.status }}</p>
+                <p><strong>Prize:</strong> {{ raffle.prize }}</p>
+                <p>
+                    <strong>Tickets issued:</strong>
+                    {{ raffle.tickets|length }} of {{ raffle.ticket_limit }}
+                </p>
+    {% if raffle.status == "Active" %}
+    <form
+        method="post"
+        action="/organizer/raffles/{{ raffle.id }}/close"
+    >
+        <button type="submit">Close Ticket Sales</button>
+    </form>
+{% elif raffle.winner is none %}
+    <form
+        method="post"
+        action="/organizer/raffles/{{ raffle.id }}/draw"
+    >
+        <button type="submit">Select Winner</button>
+    </form>
+{% else %}
+    <p>
+        <strong>Winning ticket:</strong>
+       DB-R{{ "%03d"|format(raffle.id) }}-{{ "%04d"|format(raffle.winner.ticket.ticket_number) }}
+    </p>
+    <p>
+        <strong>Winner:</strong>
+        {{ raffle.winner.ticket.order.participant.name }}
+    </p>
+{% endif %}
+            </section>
+        {% endfor %}
+    {% else %}
+        <p>No raffles have been created.</p>
+    {% endif %}
+
+    <h2>Ticket Orders</h2>
+
+    {% if orders %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Order</th>
+                    <th>Participant</th>
+                    <th>Raffle</th>
+                    <th>Quantity</th>
+                    <th>Tickets</th>
+                    <th>Total</th>
+                    <th>Payment Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                    <tr>
+                        <td>{{ order.id }}</td>
+                        <td>
+                            {{ order.participant.name }}<br>
+                            {{ order.participant.email }}
+                        </td>
+                        <td>{{ order.raffle.title }}</td>
+                        <td>{{ order.quantity }}</td>
+                        <td>
+                            {% for ticket in order.tickets %}
+                                <div>
+                                    DB-R{{ "%03d"|format(order.raffle.id) }}-{{ "%04d"|format(ticket.ticket_number) }}
+                                </div>
+                            {% endfor %}
+                        </td>
+                        <td>${{ "%.2f"|format(order.total_price) }}</td>
+                       <td>
+    <form
+        method="post"
+        action="/organizer/orders/{{ order.id }}/payment"
+    >
+        <select name="payment_status">
+            <option
+                value="Pending"
+                {% if order.payment_status == "Pending" %}selected{% endif %}
+            >
+                Pending
+            </option>
+            <option
+                value="Paid"
+                {% if order.payment_status == "Paid" %}selected{% endif %}
+            >
+                Paid
+            </option>
+            <option
+                value="Cancelled"
+                {% if order.payment_status == "Cancelled" %}selected{% endif %}
+            >
+                Cancelled
+            </option>
+        </select>
+
+        <button type="submit">Update</button>
+    </form>
+</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No ticket orders have been submitted.</p>
+    {% endif %}
+{% endblock %}

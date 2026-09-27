@@ -1,6 +1,6 @@
 """SQLAlchemy models for DrawBridge.
 
-Five entities are stored: Raffle, Participant, TicketOrder, Ticket,
+Six entities are stored: Raffle, User, Participant, TicketOrder, Ticket,
 and Winner. A Raffle has many TicketOrders and many Tickets; each
 TicketOrder belongs to one Participant and produces one or more
 Tickets; and a closed Raffle can have at most one Winner, which links
@@ -9,11 +9,53 @@ back to the single winning Ticket.
 
 from datetime import datetime
 
+from flask_login import UserMixin
+from werkzeug.security import check_password_hash, generate_password_hash
+
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
 
+class User(UserMixin, db.Model):
+    """An authenticated DrawBridge user with one assigned role."""
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), nullable=False, unique=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(
+        db.String(20),
+        nullable=False,
+        default="participant",
+    )
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.now,
+    )
+
+    __table_args__ = (
+        db.CheckConstraint(
+            "role IN ('organizer', 'participant')",
+            name="valid_user_role",
+        ),
+    )
+
+    def set_password(self, password):
+        """Store a secure hash instead of the original password."""
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        """Return whether a submitted password matches the stored hash."""
+        return check_password_hash(self.password_hash, password)
+
+    @property
+    def is_organizer(self):
+        """Return True when the user has organizer permissions."""
+        return self.role == "organizer"
+
+    
 class Raffle(db.Model):
     """A single raffle: its prize, pricing, and ticket sale window."""
 

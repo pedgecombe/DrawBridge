@@ -21,7 +21,7 @@ from sqlalchemy.pool import StaticPool
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import app as flask_app  # noqa: E402
-from models import Raffle, TicketOrder, Winner, db  # noqa: E402
+from models import Raffle, TicketOrder, User, Winner, db
 
 
 @pytest.fixture()
@@ -169,3 +169,49 @@ def test_draw_is_idempotent(client):
 
     with flask_app.app_context():
         assert Winner.query.count() == 1
+
+
+def test_user_password_is_hashed(client):
+    """Passwords are stored as hashes and can be verified securely."""
+    _, _ = client
+
+    with flask_app.app_context():
+        user = User(
+            name="Test Participant",
+            email="participant@example.com",
+            role="participant",
+        )
+        user.set_password("SecurePassword123")
+
+        db.session.add(user)
+        db.session.commit()
+
+        assert user.password_hash != "SecurePassword123"
+        assert user.check_password("SecurePassword123")
+        assert not user.check_password("WrongPassword")
+
+
+def test_user_roles_are_identified(client):
+    """Users can be distinguished by their assigned application role."""
+    _, _ = client
+
+    with flask_app.app_context():
+        participant = User(
+            name="Test Participant",
+            email="participant@example.com",
+            role="participant",
+        )
+        participant.set_password("ParticipantPassword123")
+
+        organizer = User(
+            name="Test Organizer",
+            email="organizer@example.com",
+            role="organizer",
+        )
+        organizer.set_password("OrganizerPassword123")
+
+        db.session.add_all([participant, organizer])
+        db.session.commit()
+
+        assert not participant.is_organizer
+        assert organizer.is_organizer

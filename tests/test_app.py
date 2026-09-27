@@ -69,6 +69,27 @@ def _buy_tickets(client, raffle_id, quantity, name="Test Buyer"):
         follow_redirects=True,
     )
 
+def _login_as_organizer(client):
+    """Create and authenticate an organizer for protected route tests."""
+    with flask_app.app_context():
+        organizer = User(
+            name="Authorized Organizer",
+            email="authorized.organizer@example.com",
+            role="organizer",
+        )
+        organizer.set_password("OrganizerPassword123")
+        db.session.add(organizer)
+        db.session.commit()
+
+    return client.post(
+        "/login",
+        data={
+            "email": "authorized.organizer@example.com",
+            "password": "OrganizerPassword123",
+        },
+        follow_redirects=True,
+    )
+
 
 def test_home_page_loads(client):
     """TR-01: the server starts and the home page responds."""
@@ -117,6 +138,7 @@ def test_payment_status_update(client):
     """BR-05: an order's payment status can be moved to Paid."""
     test_client, raffle_id = client
     _buy_tickets(test_client, raffle_id, quantity=1)
+    _login_as_organizer(test_client)
 
     with flask_app.app_context():
         order_id = TicketOrder.query.first().id
@@ -135,6 +157,7 @@ def test_draw_requires_closed_raffle_and_paid_ticket(client):
     ticket has been marked Paid."""
     test_client, raffle_id = client
     _buy_tickets(test_client, raffle_id, quantity=1)
+    _login_as_organizer(test_client)
 
     # Raffle is still Active and the order is still Pending: no draw.
     test_client.post(f"/organizer/raffles/{raffle_id}/draw")
@@ -157,6 +180,7 @@ def test_draw_is_idempotent(client):
     """BR-07: submitting the draw twice never creates a second winner."""
     test_client, raffle_id = client
     _buy_tickets(test_client, raffle_id, quantity=1)
+    _login_as_organizer(test_client)
 
     with flask_app.app_context():
         order = TicketOrder.query.first()
@@ -339,3 +363,39 @@ def test_organizer_login_and_logout(client):
 
     with test_client.session_transaction() as session:
         assert "_user_id" not in session
+
+def test_anonymous_user_is_redirected_from_organizer_dashboard(client):
+    """Unauthenticated users must log in before viewing organizer data."""
+    test_client, _ = client
+
+    response = test_client.get("/organizer")
+
+    assert response.status_code == 302
+    assert "/login" in response.headers["Location"]
+
+
+def test_participant_cannot_access_or_modify_organizer_data(client):
+    """Participant accounts receive 403 and cannot close a raffle."""
+    test_client, raffle_id = client
+
+    test_client.post(
+        "/register",
+        data={
+            "name": "Regular Participant",
+            "email": "participant@example.com",
+            "password": "ParticipantPassword123",
+            "confirm_password": "ParticipantPassword123",
+        },
+    )
+
+    dashboard_response = test_client.get("/organizer")
+    close_response = test_client.post(
+        f"/organizer/raffles/{raffle_id}/close"
+    )
+
+    assert dashboard_response.status_code == 403
+    assert close_response.status_code == 403
+
+    with flask_app.app_context():
+        raffle = db.session.get(Raffle, raffle_id)
+        assert raffle.status == "Active"

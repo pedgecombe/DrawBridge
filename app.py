@@ -6,18 +6,19 @@ buying tickets, viewing confirmations) and the organizer-facing pages
 a winner).
 """
 
-from datetime import datetime
-
-from flask import Flask, redirect, render_template, request, url_for
-
-from models import Participant, Raffle, Ticket, TicketOrder, Winner, db
-
 import os
 import random
 from datetime import datetime
+from functools import wraps
 
-from flask import Flask, redirect, render_template, request, url_for
-from flask_login import LoginManager, current_user, login_required, login_user, logout_user
+from flask import Flask, abort, redirect, render_template, request, url_for
+from flask_login import (
+    LoginManager,
+    current_user,
+    login_required,
+    login_user,
+    logout_user,
+)
 
 from models import Participant, Raffle, Ticket, TicketOrder, User, Winner, db
 
@@ -42,6 +43,21 @@ login_manager.init_app(app)
 def load_user(user_id):
     """Load the authenticated user from the session identifier."""
     return db.session.get(User, int(user_id))
+
+
+def organizer_required(view_function):
+    """Allow access only to authenticated organizer accounts."""
+
+    @wraps(view_function)
+    @login_required
+    def wrapped_view(*args, **kwargs):
+        if not current_user.is_organizer:
+            abort(403)
+
+        return view_function(*args, **kwargs)
+
+    return wrapped_view
+
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -229,6 +245,7 @@ def order_confirmation(order_id):
 
 
 @app.route("/organizer")
+@organizer_required
 def organizer_dashboard():
     """Show every raffle and every order for the organizer to manage."""
     raffles = Raffle.query.order_by(Raffle.created_at.desc()).all()
@@ -245,6 +262,7 @@ def organizer_dashboard():
     "/organizer/orders/<int:order_id>/payment",
     methods=["POST"],
 )
+@organizer_required
 def update_payment_status(order_id):
     """Update an order's simulated payment status.
 
@@ -265,6 +283,7 @@ def update_payment_status(order_id):
 
 
 @app.route("/organizer/raffles/create", methods=["GET", "POST"])
+@organizer_required
 def create_raffle():
     """Create a new raffle from organizer-submitted form data."""
     error = None
@@ -316,6 +335,7 @@ def create_raffle():
     "/organizer/raffles/<int:raffle_id>/close",
     methods=["POST"],
 )
+@organizer_required
 def close_raffle(raffle_id):
     """Stop ticket sales for a raffle so it becomes eligible for a draw."""
     raffle = db.get_or_404(Raffle, raffle_id)
@@ -331,6 +351,7 @@ def close_raffle(raffle_id):
     "/organizer/raffles/<int:raffle_id>/draw",
     methods=["POST"],
 )
+@organizer_required
 def draw_winner(raffle_id):
     """Randomly select a winning ticket from paid, eligible tickets.
 

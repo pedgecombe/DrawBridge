@@ -467,3 +467,54 @@ def test_order_is_owned_by_authenticated_participant(client):
         assert participant.name == "Account Owner"
         assert participant.email == "account.owner@example.com"
         assert participant.email != "submitted@example.com"
+
+
+def test_expired_raffle_closes_and_rejects_orders(client):
+    """An expired active raffle closes before accepting a new order."""
+    test_client, raffle_id = client
+
+    with flask_app.app_context():
+        raffle = db.session.get(Raffle, raffle_id)
+        raffle.closing_date = datetime.now() - timedelta(minutes=1)
+        db.session.commit()
+
+    response = _buy_tickets(
+        test_client,
+        raffle_id,
+        quantity=1,
+    )
+
+    assert b"not accepting ticket orders" in response.data
+
+    with flask_app.app_context():
+        raffle = db.session.get(Raffle, raffle_id)
+        assert raffle.status == "Closed"
+        assert TicketOrder.query.count() == 0
+
+
+def test_raffle_creation_rejects_past_closing_date(client):
+    """An organizer cannot create a raffle with a past closing time."""
+    test_client, _ = client
+    _login_as_organizer(test_client)
+
+    past_date = (
+        datetime.now() - timedelta(days=1)
+    ).isoformat(timespec="minutes")
+
+    response = test_client.post(
+        "/organizer/raffles/create",
+        data={
+            "title": "Expired Raffle",
+            "description": "This raffle should not be created.",
+            "prize": "No Prize",
+            "ticket_price": "10.00",
+            "ticket_limit": "100",
+            "closing_date": past_date,
+        },
+        follow_redirects=True,
+    )
+
+    assert b"Closing date must be in the future" in response.data
+
+    with flask_app.app_context():
+        assert Raffle.query.count() == 1

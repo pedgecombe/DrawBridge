@@ -72,6 +72,22 @@ def participant_required(view_function):
 
     return wrapped_view
 
+@app.before_request
+def close_expired_raffles():
+    """Close active raffles once their configured closing time passes."""
+    expired_raffles = Raffle.query.filter(
+        Raffle.status == "Active",
+        Raffle.closing_date <= datetime.now(),
+    ).all()
+
+    if not expired_raffles:
+        return
+
+    for raffle in expired_raffles:
+        raffle.status = "Closed"
+
+    db.session.commit()
+
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -324,6 +340,8 @@ def create_raffle():
             error = "Ticket limit must be at least one."
         elif closing_date is None:
             error = "Enter a valid closing date."
+        elif closing_date <= datetime.now():
+            error = "Closing date must be in the future."
         else:
             raffle = Raffle(
                 title=title,

@@ -7,7 +7,7 @@ a winner).
 """
 
 import os
-import random
+import secrets
 from datetime import datetime
 from functools import wraps
 
@@ -269,9 +269,14 @@ def create_order(raffle_id):
 
 
 @app.route("/orders/<int:order_id>/confirmation")
+@login_required
 def order_confirmation(order_id):
-    """Show the confirmation page listing the tickets just purchased."""
+    """Show an order only to its participant or an organizer."""
     order = db.get_or_404(TicketOrder, order_id)
+
+    if not current_user.is_organizer and order.user_id != current_user.id:
+        abort(403)
+
     return render_template("confirmation.html", order=order)
 
 
@@ -414,13 +419,13 @@ def draw_winner(raffle_id):
         and raffle.winner is None
         and eligible_tickets
     ):
-        winning_ticket = random.choice(eligible_tickets)
+        winning_ticket = secrets.choice(eligible_tickets)
 
         winner = Winner(
             raffle_id=raffle.id,
             ticket_id=winning_ticket.id,
             eligible_ticket_count=len(eligible_tickets),
-            selection_method="random.choice",
+            selection_method="secrets.choice",
             selected_by_user_id=current_user.id,
         )
 

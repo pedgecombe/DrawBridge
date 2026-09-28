@@ -534,7 +534,7 @@ def test_draw_creates_audit_record_and_completes_raffle(client):
 
         assert raffle.status == "Completed"
         assert winner.eligible_ticket_count == 2
-        assert winner.selection_method == "random.choice"
+        assert winner.selection_method == "secrets.choice"
         assert winner.selected_by.role == "organizer"
         assert winner.selected_at is not None
 
@@ -737,3 +737,50 @@ def test_organizer_creates_valid_raffle(client):
         assert raffle.ticket_price == 12.50
         assert raffle.ticket_limit == 200
         assert raffle.status == "Active"
+
+def test_anonymous_user_cannot_view_order_confirmation(client):
+    """An order confirmation requires an authenticated account."""
+    test_client, raffle_id = client
+    _buy_tickets(test_client, raffle_id, quantity=1)
+
+    with flask_app.app_context():
+        order_id = TicketOrder.query.one().id
+
+    test_client.post("/logout")
+    response = test_client.get(
+        f"/orders/{order_id}/confirmation"
+    )
+
+    assert response.status_code == 302
+    assert "/login" in response.headers["Location"]
+
+
+def test_participant_cannot_view_another_users_order(client):
+    """A participant cannot view another participant's confirmation."""
+    test_client, raffle_id = client
+    _buy_tickets(
+        test_client,
+        raffle_id,
+        quantity=1,
+        name="First Participant",
+    )
+
+    with flask_app.app_context():
+        order_id = TicketOrder.query.one().id
+
+    test_client.post("/logout")
+    test_client.post(
+        "/register",
+        data={
+            "name": "Second Participant",
+            "email": "second.participant@example.com",
+            "password": "SecondPassword123",
+            "confirm_password": "SecondPassword123",
+        },
+    )
+
+    response = test_client.get(
+        f"/orders/{order_id}/confirmation"
+    )
+
+    assert response.status_code == 403

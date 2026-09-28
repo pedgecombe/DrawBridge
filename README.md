@@ -58,7 +58,6 @@ Clone the repository and enter the project directory:
 ```powershell
 git clone https://github.com/pedgecombe/DrawBridge.git
 cd DrawBridge
-git switch assignment-3
 ```
 
 Create and activate a virtual environment:

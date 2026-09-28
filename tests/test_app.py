@@ -640,3 +640,106 @@ def test_payment_status_is_locked_after_draw(client):
         order = db.session.get(TicketOrder, order_id)
         assert order.payment_status == "Paid"
         assert order.raffle.status == "Completed"
+
+def test_registration_rejects_short_password(client):
+    """Participant passwords must contain at least eight characters."""
+    test_client, _ = client
+
+    response = test_client.post(
+        "/register",
+        data={
+            "name": "Short Password",
+            "email": "short@example.com",
+            "password": "short",
+            "confirm_password": "short",
+        },
+        follow_redirects=True,
+    )
+
+    assert b"at least eight characters" in response.data
+
+    with flask_app.app_context():
+        assert User.query.filter_by(email="short@example.com").first() is None
+
+
+def test_registration_rejects_password_mismatch(client):
+    """Password confirmation must match before account creation."""
+    test_client, _ = client
+
+    response = test_client.post(
+        "/register",
+        data={
+            "name": "Mismatch User",
+            "email": "mismatch@example.com",
+            "password": "SecurePassword123",
+            "confirm_password": "DifferentPassword123",
+        },
+        follow_redirects=True,
+    )
+
+    assert b"confirmation does not match" in response.data
+
+    with flask_app.app_context():
+        assert User.query.filter_by(
+            email="mismatch@example.com"
+        ).first() is None
+
+
+def test_exact_ticket_limit_sells_out_raffle(client):
+    """The full ticket limit can be purchased but cannot be exceeded."""
+    test_client, raffle_id = client
+
+    first_response = _buy_tickets(
+        test_client,
+        raffle_id,
+        quantity=5,
+    )
+    second_response = _buy_tickets(
+        test_client,
+        raffle_id,
+        quantity=1,
+    )
+
+    assert first_response.status_code == 200
+    assert b"exceeds the available tickets" in second_response.data
+
+    with flask_app.app_context():
+        orders = TicketOrder.query.all()
+        assert len(orders) == 1
+        assert len(orders[0].tickets) == 5
+
+
+def test_organizer_creates_valid_raffle(client):
+    """A valid organizer submission creates a complete raffle record."""
+    test_client, _ = client
+    _login_as_organizer(test_client)
+
+    future_date = (
+        datetime.now() + timedelta(days=10)
+    ).isoformat(timespec="minutes")
+
+    response = test_client.post(
+        "/organizer/raffles/create",
+        data={
+            "title": "New Community Raffle",
+            "description": "A valid automated test raffle.",
+            "prize": "Gift Basket",
+            "ticket_price": "12.50",
+            "ticket_limit": "200",
+            "closing_date": future_date,
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"New Community Raffle" in response.data
+
+    with flask_app.app_context():
+        raffle = Raffle.query.filter_by(
+            title="New Community Raffle"
+        ).one()
+
+        assert raffle.prize == "Gift Basket"
+        assert raffle.ticket_price == 12.50
+        assert raffle.ticket_limit == 200
+        assert raffle.status == "Active"

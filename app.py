@@ -29,7 +29,10 @@ app.config["SECRET_KEY"] = os.environ.get(
     "drawbridge-local-development-key",
 )
 
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///drawbridge.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
+    "DRAWBRIDGE_DATABASE_URI",
+    "sqlite:///drawbridge.db",
+)
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)

@@ -16,9 +16,10 @@ import sys
 from datetime import datetime, timedelta
 
 import pytest
-from sqlalchemy.pool import StaticPool
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+os.environ["DRAWBRIDGE_DATABASE_URI"] = "sqlite://"
 
 from app import app as flask_app  # noqa: E402
 from models import Participant, Raffle, TicketOrder, User, Winner, db
@@ -27,14 +28,7 @@ from models import Participant, Raffle, TicketOrder, User, Winner, db
 @pytest.fixture()
 def client():
     """A Flask test client backed by a fresh in-memory SQLite database."""
-    flask_app.config.update(
-        TESTING=True,
-        SQLALCHEMY_DATABASE_URI="sqlite://",
-        SQLALCHEMY_ENGINE_OPTIONS={
-            "connect_args": {"check_same_thread": False},
-            "poolclass": StaticPool,
-        },
-    )
+    flask_app.config.update(TESTING=True)
 
     with flask_app.app_context():
         db.create_all()

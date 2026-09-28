@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <defs>
+    <style>
+      .title { font: 700 34px Arial, sans-serif; fill: #162235; }
+      .entity { fill: #ffffff; stroke: #284b63; stroke-width: 3; rx: 12; }
+      .head { fill: #284b63; }
+      .ename { font: 700 22px Arial, sans-serif; fill: #ffffff; }
+      .field { font: 17px Consolas, monospace; fill: #1f2933; }
+      .rel { fill: none; stroke: #657786; stroke-width: 3; }
+      .label { font: 700 17px Arial, sans-serif; fill: #334e68; }
+      .note { font: 16px Arial, sans-serif; fill: #52606d; }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#657786"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="1000" fill="#f5f7fa"/>
+  <text x="60" y="50" class="title">DrawBridge Relational Database Model</text>
+  <text x="60" y="80" class="note">Assignment 3 implementation with authentication, ownership, draw auditing, and archiving</text>
+
+  <!-- User -->
+  <rect x="60" y="120" width="390" height="250" class="entity"/>
+  <path d="M72 120 H438 Q450 120 450 132 V168 H60 V132 Q60 120 72 120" class="head"/>
+  <text x="80" y="153" class="ename">User</text>
+  <text x="80" y="202" class="field">PK  id</text>
+  <text x="80" y="233" class="field">    name</text>
+  <text x="80" y="264" class="field">UQ  email</text>
+  <text x="80" y="295" class="field">    password_hash</text>
+  <text x="80" y="326" class="field">    role</text>
+  <text x="80" y="357" class="field">    created_at</text>
+
+  <!-- Raffle -->
+  <rect x="605" y="120" width="390" height="310" class="entity"/>
+  <path d="M617 120 H983 Q995 120 995 132 V168 H605 V132 Q605 120 617 120" class="head"/>
+  <text x="625" y="153" class="ename">Raffle</text>
+  <text x="625" y="202" class="field">PK  id</text>
+  <text x="625" y="233" class="field">    title</text>
+  <text x="625" y="264" class="field">    description, prize</text>
+  <text x="625" y="295" class="field">    ticket_price, ticket_limit</text>
+  <text x="625" y="326" class="field">    closing_date</text>
+  <text x="625" y="357" class="field">    status</text>
+  <text x="625" y="388" class="field">    created_at</text>
+  <text x="625" y="419" class="field">    archived_at</text>
+
+  <!-- Winner -->
+  <rect x="1150" y="120" width="390" height="310" class="entity"/>
+  <path d="M1162 120 H1528 Q1540 120 1540 132 V168 H1150 V132 Q1150 120 1162 120" class="head"/>
+  <text x="1170" y="153" class="ename">Winner</text>
+  <text x="1170" y="202" class="field">PK  id</text>
+  <text x="1170" y="233" class="field">FK  raffle_id (unique)</text>
+  <text x="1170" y="264" class="field">FK  ticket_id (unique)</text>
+  <text x="1170" y="295" class="field">FK  selected_by_user_id</text>
+  <text x="1170" y="326" class="field">    selected_at</text>
+  <text x="1170" y="357" class="field">    eligible_ticket_count</text>
+  <text x="1170" y="388" class="field">    selection_method</text>
+
+  <!-- Participant -->
+  <rect x="60" y="620" width="390" height="220" class="entity"/>
+  <path d="M72 620 H438 Q450 620 450 632 V668 H60 V632 Q60 620 72 620" class="head"/>
+  <text x="80" y="653" class="ename">Participant</text>
+  <text x="80" y="702" class="field">PK  id</text>
+  <text x="80" y="733" class="field">    name</text>
+  <text x="80" y="764" class="field">    email</text>
+  <text x="80" y="795" class="field">    phone</text>
+
+  <!-- TicketOrder -->
+  <rect x="605" y="570" width="390" height="330" class="entity"/>
+  <path d="M617 570 H983 Q995 570 995 582 V618 H605 V582 Q605 570 617 570" class="head"/>
+  <text x="625" y="603" class="ename">TicketOrder</text>
+  <text x="625" y="652" class="field">PK  id</text>
+  <text x="625" y="683" class="field">FK  raffle_id</text>
+  <text x="625" y="714" class="field">FK  participant_id</text>
+  <text x="625" y="745" class="field">FK  user_id</text>
+  <text x="625" y="776" class="field">    quantity</text>
+  <text x="625" y="807" class="field">    total_price</text>
+  <text x="625" y="838" class="field">    payment_status</text>
+  <text x="625" y="869" class="field">    created_at</text>
+
+  <!-- Ticket -->
+  <rect x="1150" y="620" width="390" height="240" class="entity"/>
+  <path d="M1162 620 H1528 Q1540 620 1540 632 V668 H1150 V632 Q1150 620 1162 620" class="head"/>
+  <text x="1170" y="653" class="ename">Ticket</text>
+  <text x="1170" y="702" class="field">PK  id</text>
+  <text x="1170" y="733" class="field">FK  order_id</text>
+  <text x="1170" y="764" class="field">FK  raffle_id</text>
+  <text x="1170" y="795" class="field">    ticket_number</text>
+  <text x="1170" y="826" class="field">UQ  raffle_id + ticket_number</text>
+
+  <!-- Relationships -->
+  <path d="M450 285 H520 V745 H605" class="rel" marker-end="url(#arrow)"/>
+  <text x="470" y="270" class="label">1</text><text x="575" y="732" class="label">0..*</text>
+
+  <path d="M450 730 H605" class="rel" marker-end="url(#arrow)"/>
+  <text x="470" y="716" class="label">1</text><text x="560" y="716" class="label">0..*</text>
+
+  <path d="M800 430 V570" class="rel" marker-end="url(#arrow)"/>
+  <text x="815" y="465" class="label">1</text><text x="815" y="555" class="label">0..*</text>
+
+  <path d="M995 735 H1150" class="rel" marker-end="url(#arrow)"/>
+  <text x="1015" y="721" class="label">1</text><text x="1100" y="721" class="label">1..*</text>
+
+  <path d="M995 330 H1060 V760 H1150" class="rel" marker-end="url(#arrow)"/>
+  <text x="1015" y="315" class="label">1</text><text x="1095" y="746" class="label">0..*</text>
+
+  <path d="M995 225 H1150" class="rel" marker-end="url(#arrow)"/>
+  <text x="1015" y="211" class="label">1</text><text x="1085" y="211" class="label">0..1</text>
+
+  <path d="M1345 620 V430" class="rel" marker-end="url(#arrow)"/>
+  <text x="1360" y="600" class="label">1</text><text x="1360" y="460" class="label">0..1</text>
+
+  <path d="M450 210 H1085 V270 H1150" class="rel" marker-end="url(#arrow)"/>
+  <text x="470" y="196" class="label">1</text><text x="1095" y="256" class="label">0..*</text>
+</svg>

@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="430" viewBox="0 0 1500 430">
+  <defs>
+    <style>
+      .title { font: 700 34px Arial, sans-serif; fill: #162235; }
+      .state { fill: #ffffff; stroke: #284b63; stroke-width: 4; rx: 18; }
+      .sname { font: 700 25px Arial, sans-serif; fill: #284b63; text-anchor: middle; }
+      .desc { font: 17px Arial, sans-serif; fill: #52606d; text-anchor: middle; }
+      .arrow { stroke: #657786; stroke-width: 4; fill: none; }
+      .guard { font: 16px Arial, sans-serif; fill: #334e68; text-anchor: middle; }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto">
+      <path d="M0,0 L0,8 L11,4 z" fill="#657786"/>
+    </marker>
+  </defs>
+  <rect width="1500" height="430" fill="#f5f7fa"/>
+  <text x="60" y="62" class="title">DrawBridge Raffle Lifecycle</text>
+
+  <rect x="60" y="145" width="270" height="150" class="state"/>
+  <text x="195" y="195" class="sname">Active</text>
+  <text x="195" y="232" class="desc">Ticket sales open</text>
+  <text x="195" y="262" class="desc">Payment status editable</text>
+
+  <rect x="430" y="145" width="270" height="150" class="state"/>
+  <text x="565" y="195" class="sname">Closed</text>
+  <text x="565" y="232" class="desc">Ticket sales stopped</text>
+  <text x="565" y="262" class="desc">Paid tickets eligible</text>
+
+  <rect x="800" y="145" width="270" height="150" class="state"/>
+  <text x="935" y="195" class="sname">Completed</text>
+  <text x="935" y="232" class="desc">Winner recorded</text>
+  <text x="935" y="262" class="desc">Eligibility locked</text>
+
+  <rect x="1170" y="145" width="270" height="150" class="state"/>
+  <text x="1305" y="195" class="sname">Archived</text>
+  <text x="1305" y="232" class="desc">Result retained</text>
+  <text x="1305" y="262" class="desc">No further changes</text>
+
+  <path d="M330 220 H430" class="arrow" marker-end="url(#arrow)"/>
+  <text x="380" y="130" class="guard">Organizer closes sales</text>
+  <text x="380" y="335" class="guard">or closing date passes</text>
+
+  <path d="M700 220 H800" class="arrow" marker-end="url(#arrow)"/>
+  <text x="750" y="130" class="guard">At least one paid ticket</text>
+  <text x="750" y="335" class="guard">Secure random draw succeeds</text>
+
+  <path d="M1070 220 H1170" class="arrow" marker-end="url(#arrow)"/>
+  <text x="1120" y="130" class="guard">Winner exists</text>
+  <text x="1120" y="335" class="guard">Organizer archives result</text>
+</svg>

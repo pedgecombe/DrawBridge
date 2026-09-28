@@ -59,6 +59,20 @@ def organizer_required(view_function):
     return wrapped_view
 
 
+def participant_required(view_function):
+    """Allow access only to authenticated participant accounts."""
+
+    @wraps(view_function)
+    @login_required
+    def wrapped_view(*args, **kwargs):
+        if current_user.role != "participant":
+            abort(403)
+
+        return view_function(*args, **kwargs)
+
+    return wrapped_view
+
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
     """Create a participant account and begin an authenticated session."""
@@ -148,6 +162,7 @@ def raffle_details(raffle_id):
 
 
 @app.route("/raffles/<int:raffle_id>/order", methods=["GET", "POST"])
+@participant_required
 def create_order(raffle_id):
     """Collect participant details and create a ticket order.
 
@@ -165,8 +180,6 @@ def create_order(raffle_id):
     error = None
 
     if request.method == "POST":
-        name = request.form.get("name", "").strip()
-        email = request.form.get("email", "").strip()
         phone = request.form.get("phone", "").strip()
 
         try:
@@ -176,9 +189,7 @@ def create_order(raffle_id):
 
         tickets_remaining = raffle.ticket_limit - len(raffle.tickets)
 
-        if not name or not email:
-            error = "Name and email are required."
-        elif raffle.status != "Active":
+        if raffle.status != "Active":
             error = "This raffle is not accepting ticket orders."
         elif quantity < 1:
             error = "Select at least one ticket."
@@ -186,8 +197,8 @@ def create_order(raffle_id):
             error = "The requested quantity exceeds the available tickets."
         else:
             participant = Participant(
-                name=name,
-                email=email,
+                name=current_user.name,
+                email=current_user.email,
                 phone=phone,
             )
             db.session.add(participant)
@@ -196,6 +207,7 @@ def create_order(raffle_id):
             order = TicketOrder(
                 raffle_id=raffle.id,
                 participant_id=participant.id,
+                user_id=current_user.id,
                 quantity=quantity,
                 total_price=round(quantity * raffle.ticket_price, 2),
                 payment_status="Pending",

@@ -94,12 +94,22 @@ class TicketOrder(db.Model):
     participant_id = db.Column(
         db.Integer, db.ForeignKey("participant.id"), nullable=False
     )
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=True,
+    )
     quantity = db.Column(db.Integer, nullable=False)
     total_price = db.Column(db.Float, nullable=False)
     payment_status = db.Column(
         db.String(20), nullable=False, default="Pending"
     )
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
+
+    user = db.relationship(
+        "User",
+        backref="ticket_orders",
+    )
 
     tickets = db.relationship("Ticket", backref="order", lazy=True)
 

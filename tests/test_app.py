@@ -21,7 +21,7 @@ from sqlalchemy.pool import StaticPool
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import app as flask_app  # noqa: E402
-from models import Raffle, TicketOrder, User, Winner, db
+from models import Participant, Raffle, TicketOrder, User, Winner, db
 
 
 @pytest.fixture()
@@ -58,19 +58,43 @@ def client():
 
 
 def _buy_tickets(client, raffle_id, quantity, name="Test Buyer"):
+    """Authenticate a participant, then submit a ticket order."""
+    with client.session_transaction() as session:
+        is_authenticated = "_user_id" in session
+
+    if not is_authenticated:
+        email = (
+            name.lower()
+            .replace(" ", ".")
+            + "@example.com"
+        )
+
+        client.post(
+            "/register",
+            data={
+                "name": name,
+                "email": email,
+                "password": "ParticipantPassword123",
+                "confirm_password": "ParticipantPassword123",
+            },
+        )
+
     return client.post(
         f"/raffles/{raffle_id}/order",
         data={
             "name": name,
-            "email": "buyer@example.com",
+            "email": "submitted@example.com",
             "phone": "",
             "quantity": str(quantity),
         },
         follow_redirects=True,
     )
 
+
 def _login_as_organizer(client):
     """Create and authenticate an organizer for protected route tests."""
+    client.post("/logout")
+
     with flask_app.app_context():
         organizer = User(
             name="Authorized Organizer",
@@ -399,3 +423,47 @@ def test_participant_cannot_access_or_modify_organizer_data(client):
     with flask_app.app_context():
         raffle = db.session.get(Raffle, raffle_id)
         assert raffle.status == "Active"
+
+def test_anonymous_user_must_log_in_before_ordering(client):
+    """Anonymous users are redirected to login before ticket ordering."""
+    test_client, raffle_id = client
+
+    response = test_client.get(f"/raffles/{raffle_id}/order")
+
+    assert response.status_code == 302
+    assert "/login" in response.headers["Location"]
+
+
+def test_organizer_cannot_use_participant_order_route(client):
+    """Organizer accounts cannot purchase participant tickets."""
+    test_client, raffle_id = client
+    _login_as_organizer(test_client)
+
+    response = test_client.get(f"/raffles/{raffle_id}/order")
+
+    assert response.status_code == 403
+
+
+def test_order_is_owned_by_authenticated_participant(client):
+    """A new order records its authenticated user and trusted identity."""
+    test_client, raffle_id = client
+
+    _buy_tickets(
+        test_client,
+        raffle_id,
+        quantity=2,
+        name="Account Owner",
+    )
+
+    with flask_app.app_context():
+        order = TicketOrder.query.one()
+        participant = Participant.query.one()
+        user = User.query.filter_by(
+            email="account.owner@example.com"
+        ).one()
+
+        assert order.user_id == user.id
+        assert order.user.email == "account.owner@example.com"
+        assert participant.name == "Account Owner"
+        assert participant.email == "account.owner@example.com"
+        assert participant.email != "submitted@example.com"

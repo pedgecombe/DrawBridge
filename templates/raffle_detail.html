@@ -22,8 +22,14 @@
     </p>
     <p><strong>Status:</strong> {{ raffle.status }}</p>
 
-    {% if raffle.status == "Active" %}
-    <a href="/raffles/{{ raffle.id }}/order">Purchase Tickets</a>
+        {% if raffle.status == "Active" %}
+        {% if current_user.is_authenticated and current_user.role == "participant" %}
+            <a href="/raffles/{{ raffle.id }}/order">Purchase Tickets</a>
+        {% elif not current_user.is_authenticated %}
+            <a href="{{ url_for('login') }}">Log In to Purchase Tickets</a>
+        {% else %}
+            <p>Organizer accounts cannot purchase tickets.</p>
+        {% endif %}
 {% elif raffle.winner %}
     <p><strong>This raffle is closed.</strong></p>
 

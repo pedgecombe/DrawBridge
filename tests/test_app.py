@@ -567,3 +567,76 @@ def test_completed_raffle_can_be_archived(client):
         assert raffle.archived_at is not None
         assert raffle.winner is not None
         assert Winner.query.count() == 1
+
+def test_draw_uses_only_paid_tickets(client):
+    """Pending and cancelled tickets are excluded from the draw."""
+    test_client, raffle_id = client
+    _buy_tickets(test_client, raffle_id, quantity=1)
+    _buy_tickets(test_client, raffle_id, quantity=2)
+
+    with flask_app.app_context():
+        orders = TicketOrder.query.order_by(TicketOrder.id).all()
+        paid_order = orders[0]
+        cancelled_order = orders[1]
+
+        paid_order.payment_status = "Paid"
+        cancelled_order.payment_status = "Cancelled"
+        db.session.commit()
+
+        paid_order_id = paid_order.id
+
+    _login_as_organizer(test_client)
+    test_client.post(f"/organizer/raffles/{raffle_id}/close")
+    test_client.post(f"/organizer/raffles/{raffle_id}/draw")
+
+    with flask_app.app_context():
+        winner = Winner.query.one()
+
+        assert winner.eligible_ticket_count == 1
+        assert winner.ticket.order_id == paid_order_id
+        assert winner.ticket.order.payment_status == "Paid"
+
+
+def test_invalid_payment_status_is_rejected(client):
+    """Unsupported payment values are not stored."""
+    test_client, raffle_id = client
+    _buy_tickets(test_client, raffle_id, quantity=1)
+    _login_as_organizer(test_client)
+
+    with flask_app.app_context():
+        order_id = TicketOrder.query.one().id
+
+    test_client.post(
+        f"/organizer/orders/{order_id}/payment",
+        data={"payment_status": "Refunded"},
+    )
+
+    with flask_app.app_context():
+        order = db.session.get(TicketOrder, order_id)
+        assert order.payment_status == "Pending"
+
+
+def test_payment_status_is_locked_after_draw(client):
+    """Payment eligibility cannot change after winner selection."""
+    test_client, raffle_id = client
+    _buy_tickets(test_client, raffle_id, quantity=1)
+
+    with flask_app.app_context():
+        order = TicketOrder.query.one()
+        order.payment_status = "Paid"
+        db.session.commit()
+        order_id = order.id
+
+    _login_as_organizer(test_client)
+    test_client.post(f"/organizer/raffles/{raffle_id}/close")
+    test_client.post(f"/organizer/raffles/{raffle_id}/draw")
+
+    test_client.post(
+        f"/organizer/orders/{order_id}/payment",
+        data={"payment_status": "Cancelled"},
+    )
+
+    with flask_app.app_context():
+        order = db.session.get(TicketOrder, order_id)
+        assert order.payment_status == "Paid"
+        assert order.raffle.status == "Completed"

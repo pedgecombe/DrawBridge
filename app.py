@@ -303,7 +303,10 @@ def update_payment_status(order_id):
 
     allowed_statuses = {"Pending", "Paid", "Cancelled"}
 
-    if new_status in allowed_statuses:
+    if (
+        new_status in allowed_statuses
+        and order.raffle.status in {"Active", "Closed"}
+    ):
         order.payment_status = new_status
         db.session.commit()
 

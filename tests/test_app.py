@@ -518,3 +518,52 @@ def test_raffle_creation_rejects_past_closing_date(client):
 
     with flask_app.app_context():
         assert Raffle.query.count() == 1
+
+
+def test_draw_creates_audit_record_and_completes_raffle(client):
+    """A successful draw records its audit details and completes the raffle."""
+    test_client, raffle_id = client
+    _buy_tickets(test_client, raffle_id, quantity=2)
+
+    with flask_app.app_context():
+        order = TicketOrder.query.one()
+        order.payment_status = "Paid"
+        db.session.commit()
+
+    _login_as_organizer(test_client)
+    test_client.post(f"/organizer/raffles/{raffle_id}/close")
+    test_client.post(f"/organizer/raffles/{raffle_id}/draw")
+
+    with flask_app.app_context():
+        raffle = db.session.get(Raffle, raffle_id)
+        winner = Winner.query.one()
+
+        assert raffle.status == "Completed"
+        assert winner.eligible_ticket_count == 2
+        assert winner.selection_method == "random.choice"
+        assert winner.selected_by.role == "organizer"
+        assert winner.selected_at is not None
+
+
+def test_completed_raffle_can_be_archived(client):
+    """Archiving preserves the completed raffle and winning record."""
+    test_client, raffle_id = client
+    _buy_tickets(test_client, raffle_id, quantity=1)
+
+    with flask_app.app_context():
+        order = TicketOrder.query.one()
+        order.payment_status = "Paid"
+        db.session.commit()
+
+    _login_as_organizer(test_client)
+    test_client.post(f"/organizer/raffles/{raffle_id}/close")
+    test_client.post(f"/organizer/raffles/{raffle_id}/draw")
+    test_client.post(f"/organizer/raffles/{raffle_id}/archive")
+
+    with flask_app.app_context():
+        raffle = db.session.get(Raffle, raffle_id)
+
+        assert raffle.status == "Archived"
+        assert raffle.archived_at is not None
+        assert raffle.winner is not None
+        assert Winner.query.count() == 1

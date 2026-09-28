@@ -35,6 +35,7 @@ class User(UserMixin, db.Model):
         default=datetime.now,
     )
 
+
     __table_args__ = (
         db.CheckConstraint(
             "role IN ('organizer', 'participant')",
@@ -68,6 +69,7 @@ class Raffle(db.Model):
     closing_date = db.Column(db.DateTime, nullable=False)
     status = db.Column(db.String(20), nullable=False, default="Active")
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
+    archived_at = db.Column(db.DateTime)
 
     orders = db.relationship("TicketOrder", backref="raffle", lazy=True)
     tickets = db.relationship("Ticket", backref="raffle", lazy=True)
@@ -157,5 +159,18 @@ class Winner(db.Model):
     )
     selected_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
 
+    eligible_ticket_count = db.Column(db.Integer, nullable=False)
+    selection_method = db.Column(
+        db.String(50),
+        nullable=False,
+        default="random.choice",
+    )
+    selected_by_user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False,
+    )
+
     raffle = db.relationship("Raffle", backref=db.backref("winner", uselist=False))
     ticket = db.relationship("Ticket")
+    selected_by = db.relationship("User")

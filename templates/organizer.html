@@ -28,22 +28,52 @@
     >
         <button type="submit">Close Ticket Sales</button>
     </form>
-{% elif raffle.winner is none %}
+    {% elif raffle.winner is none %}
     <form
         method="post"
         action="/organizer/raffles/{{ raffle.id }}/draw"
     >
         <button type="submit">Select Winner</button>
     </form>
-{% else %}
+    {% else %}
     <p>
         <strong>Winning ticket:</strong>
-       DB-R{{ "%03d"|format(raffle.id) }}-{{ "%04d"|format(raffle.winner.ticket.ticket_number) }}
+        DB-R{{ "%03d"|format(raffle.id) }}-{{ "%04d"|format(raffle.winner.ticket.ticket_number) }}
     </p>
     <p>
         <strong>Winner:</strong>
         {{ raffle.winner.ticket.order.participant.name }}
     </p>
+    <p>
+        <strong>Eligible tickets:</strong>
+        {{ raffle.winner.eligible_ticket_count }}
+    </p>
+    <p>
+        <strong>Selection method:</strong>
+        {{ raffle.winner.selection_method }}
+    </p>
+    <p>
+        <strong>Selected by:</strong>
+        {{ raffle.winner.selected_by.name }}
+    </p>
+    <p>
+        <strong>Selected at:</strong>
+        {{ raffle.winner.selected_at.strftime("%B %d, %Y at %I:%M %p") }}
+    </p>
+
+    {% if raffle.status == "Completed" %}
+        <form
+            method="post"
+            action="/organizer/raffles/{{ raffle.id }}/archive"
+        >
+            <button type="submit">Archive Raffle</button>
+        </form>
+    {% elif raffle.status == "Archived" %}
+        <p>
+            <strong>Archived at:</strong>
+            {{ raffle.archived_at.strftime("%B %d, %Y at %I:%M %p") }}
+        </p>
+    {% endif %}
 {% endif %}
             </section>
         {% endfor %}

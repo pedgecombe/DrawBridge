@@ -413,9 +413,30 @@ def draw_winner(raffle_id):
         winner = Winner(
             raffle_id=raffle.id,
             ticket_id=winning_ticket.id,
+            eligible_ticket_count=len(eligible_tickets),
+            selection_method="random.choice",
+            selected_by_user_id=current_user.id,
         )
 
+        raffle.status = "Completed"
+
         db.session.add(winner)
+        db.session.commit()
+
+    return redirect(url_for("organizer_dashboard"))
+
+@app.route(
+    "/organizer/raffles/<int:raffle_id>/archive",
+    methods=["POST"],
+)
+@organizer_required
+def archive_raffle(raffle_id):
+    """Archive a completed raffle while preserving its result."""
+    raffle = db.get_or_404(Raffle, raffle_id)
+
+    if raffle.status == "Completed" and raffle.winner is not None:
+        raffle.status = "Archived"
+        raffle.archived_at = datetime.now()
         db.session.commit()
 
     return redirect(url_for("organizer_dashboard"))
